@@ -4,7 +4,7 @@ env:
   variables:
     PROJECT_NAME: "demo"
     REPORT_DIR: "security-reports"
-    SAST_FILE_REPORT: "bandit-report.sarif"
+    SAST_FILE_REPORT: "bandit-report.json"
     SCA_FILE_REPORT: "dependency-check-report.xml"
 
 phases:
@@ -34,7 +34,7 @@ phases:
       # --- 1. Static Analysis (SAST) con Bandit (Docker) ---
       - echo "Ejecutando SAST con Bandit via Docker"
       # Usando una sola linea para evitar errores de sintaxis YAML
-      - docker run --rm -v "$(pwd)":/src:z ghcr.io/pycqa/bandit/bandit -r /src -f sarif -o /src/${REPORT_DIR}/${SAST_FILE_REPORT} || true
+      - docker run --rm -v "$(pwd)":/src:z ghcr.io/pycqa/bandit/bandit -r /src -f json -o /src/${REPORT_DIR}/${SAST_FILE_REPORT} || true
       
       # --- 2. Software Composition Analysis (SCA) con OWASP Dependency-Check (Docker) ---
       # Se ejecuta OWASP Dependency-Check como usuario root user para solventar problemas de permisos
@@ -44,7 +44,7 @@ phases:
           docker run --rm -u root -v "$(pwd)":/src:z owasp/dependency-check 
           --scan /src/requirements.txt 
           --project "${PROJECT_NAME}" 
-          --format JUNIT 
+          --format XML 
           --out /src/${REPORT_DIR}/${SCA_FILE_REPORT} 
           --nvdApiKey ${NIST_API_KEY}
           
