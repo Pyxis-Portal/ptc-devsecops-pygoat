@@ -1,0 +1,82 @@
+version: 0.2
+
+env:
+  variables:
+    PROJECT_NAME: "demo"
+    REPORT_DIR: "security-reports"
+    SAST_FILE_REPORT: "bandit-report.sarif"
+    SCA_FILE_REPORT: "dependency-check-report.xml"
+
+phases:
+  install:
+    commands:
+      - echo "Setup inicial"
+      - mkdir -p ${REPORT_DIR}
+      
+      # Instala pre-commit para chequear validaciones
+      #- pip install pre-commit
+      
+      # Instala pipreqs para actualizar requirements.txt
+      - pip install pipreqs
+
+  pre_build:
+    commands:
+      - echo "Ejecutando pre-commit como paso de validación en CI"
+      #- pre-commit run --all-files
+
+  build:
+    commands:
+      - echo "Actualizando requirements.txt para asegurar que todas las dependencias son escaneadas"
+      - pipreqs --force . 
+      
+      - echo "Ejecutando análsis de seguridad"
+      
+      # --- 1. Static Analysis (SAST) con Bandit (Docker) ---
+      - echo "Ejecutando SAST con Bandit via Docker"
+      # Usando una sola linea para evitar errores de sintaxis YAML
+      - docker run --rm -v "$(pwd)":/src:z ghcr.io/pycqa/bandit/bandit -r /src -f sarif -o /src/${REPORT_DIR}/${SAST_FILE_REPORT} || true
+      
+      # --- 2. Software Composition Analysis (SCA) con OWASP Dependency-Check (Docker) ---
+      # Se ejecuta OWASP Dependency-Check como usuario root user para solventar problemas de permisos
+      - echo "Ejecutando SCA con OWASP Dependency-Check via Docker..."
+      - docker pull owasp/dependency-check
+      - >
+          docker run --rm -u root -v "$(pwd)":/src:z owasp/dependency-check 
+          --scan /src/requirements.txt 
+          --project "${PROJECT_NAME}" 
+          --format JUNIT 
+          --out /src/${REPORT_DIR}/${SCA_FILE_REPORT} 
+          --nvdApiKey ${NIST_API_KEY}
+          
+  post_build:
+    commands:
+      - echo "Contenido de directorio de reportes:"
+      - ls ${REPORT_DIR}
+
+      - echo "Subiendo resultados de análisis al DefectDojo con curl..."
+      
+      # Sube reporte de Bandit con curl si el archivo existe.
+      - |
+        if [ -f "${REPORT_DIR}/${SAST_FILE_REPORT}" ]; then
+          echo "Subiendo reporte SAST a DefectDojo: '/src/${REPORT_DIR}/${SAST_FILE_REPORT}'"
+          curl -X POST "https://${DD_HOST}/api/v2/import-scan/" \
+            -H "Authorization: Token '${DD_API_KEY}'" \
+            -F "scan_type=SARIF" \
+            -F "test_title=SAST-Bandit" \
+            -F "file=@/src/${REPORT_DIR}/${SAST_FILE_REPORT}" \
+            -F "engagement=$ENGAMENT_ID" \
+            -F "scan_date=$(date +%Y-%m-%d)" \
+            -F "verified=true" \
+            -F "active=true"
+        fi
+      
+      # Sube reporte de OWASP Dependency-Check con curl si el archivo existe.
+      - |
+        if [ -f "${REPORT_DIR}/${SCA_FILE_REPORT}" ]; then
+          echo "Subiendo reporte SCA a DefectDojo: '/src/${REPORT_DIR}/${SCA_FILE_REPORT}'"
+        fi
+
+artifacts:
+  files:
+    - '${REPORT_DIR}/**/*'
+  discard-paths: no
