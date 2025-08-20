@@ -61,7 +61,7 @@ phases:
           echo "Subiendo reporte SAST a DefectDojo: '/src/${REPORT_DIR}/${SAST_FILE_REPORT}'"
           curl -X POST "https://${DD_HOST}/api/v2/import-scan/" \
             -H "Authorization: Token '${DD_API_KEY}'" \
-            -F "scan_type=SARIF" \
+            -F "scan_type=Bandit Scan" \
             -F "test_title=SAST-Bandit" \
             -F "file=@/src/${REPORT_DIR}/${SAST_FILE_REPORT}" \
             -F "engagement=$ENGAMENT_ID" \
