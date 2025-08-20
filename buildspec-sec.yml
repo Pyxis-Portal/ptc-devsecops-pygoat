@@ -63,7 +63,7 @@ phases:
             -H "Authorization: Token '${DD_API_KEY}'" \
             -F "scan_type=Bandit Scan" \
             -F "test_title=SAST-Bandit" \
-            -F "file=@/src/${REPORT_DIR}/${SAST_FILE_REPORT}" \
+            -F "file=@${REPORT_DIR}/${SAST_FILE_REPORT}" \
             -F "engagement=$ENGAMENT_ID" \
             -F "scan_date=$(date +%Y-%m-%d)" \
             -F "verified=true" \
