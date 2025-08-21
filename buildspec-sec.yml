@@ -6,6 +6,7 @@ env:
     REPORT_DIR: "security-reports"
     SAST_FILE_REPORT: "bandit-report.json"
     SCA_FILE_REPORT: "dependency-check-report.xml"
+    
 
 phases:
   install:
@@ -48,7 +49,7 @@ phases:
       - docker pull owasp/dependency-check
       - >
           docker run --rm -u root -v "$(pwd)":/src:z owasp/dependency-check 
-          --scan /src/requirements.txt 
+          --scan /src 
           --project "${PROJECT_NAME}" 
           --format XML 
           --out /src/${REPORT_DIR}/${SCA_FILE_REPORT} 
