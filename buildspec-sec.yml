@@ -10,27 +10,33 @@ env:
 phases:
   install:
     commands:
-      - echo "Setup inicial"
+      - echo "Iniciando setup inicial..."
+      
+      - echo "Creando directorio para reportes" 
       - mkdir -p ${REPORT_DIR}
       
       # Instala pre-commit para chequear validaciones
+      #- echo "Instalando pre-commit" 
       #- pip install pre-commit
       
-      # Instala pipreqs para actualizar requirements.txt
-      - pip install pipreqs
+      # Instala pipreqs para generar / actualizar requirements.txt
+      #- echo "Instalando pipreqs" 
+      #- pip install pipreqs
 
   pre_build:
     commands:
-      - echo "Ejecutando pre-commit como paso de validación en CI"
+      - echo "Iniciando pre-condiciones..."
+      #- echo "Ejecutando pre-commit como paso de validación en CI"
       #- pre-commit run --all-files
+
+      # Si el proyecto usa un archivo requirements.txt, estas línea no son necesaria.
+      #- echo "Actualizando requirements.txt para asegurar que todas las dependencias son escaneadas"
+      #- pipreqs --force . 
 
   build:
     commands:
-      - echo "Actualizando requirements.txt para asegurar que todas las dependencias son escaneadas"
-      - pipreqs --force . 
-      
-      - echo "Ejecutando análsis de seguridad"
-      
+      - echo "Iniciando análsis de seguridad..."
+       
       # --- 1. Static Analysis (SAST) con Bandit (Docker) ---
       - echo "Ejecutando SAST con Bandit via Docker"
       # Usando una sola linea para evitar errores de sintaxis YAML
@@ -51,15 +57,22 @@ phases:
           
   post_build:
     commands:
+      - echo "Iniciando procesamiento de reportes..."
+    
       - echo "Contenido de directorio de reportes:"
       - ls ${REPORT_DIR}
 
-      - echo "Subiendo resultados de análisis al DefectDojo con curl..."
+      - echo "Verificando conectividad con DefectDojo..."
+      # Este comando intentará una conexión rápida, si falla, el pipeline se detendrá aquí
+      - curl --head --silent --fail "https://${DD_HOST}/api/v2/" || { echo "No se pudo conectar a DefectDojo. Abortando subida."; exit 1; }
+      - echo "Conexión a DefectDojo exitosa."
+
+      - echo "Subiendo reportes a DefectDojo vía API con curl..."
       
       # Sube reporte de Bandit con curl si el archivo existe.
       - |
         if [ -f "${REPORT_DIR}/${SAST_FILE_REPORT}" ]; then
-          echo "Subiendo reporte SAST a DefectDojo: '/src/${REPORT_DIR}/${SAST_FILE_REPORT}'"
+          echo "Subiendo reporte SAST a DefectDojo: '${REPORT_DIR}/${SAST_FILE_REPORT}'"
           curl -k -X POST "https://${DD_HOST}/api/v2/import-scan/" \
             -H "Authorization: Token ${DD_API_KEY}" \
             -F "scan_type=Bandit Scan" \
@@ -68,13 +81,13 @@ phases:
             -F "engagement=$DD_ENGAGEMENT_ID" \
             -F "scan_date=$(date +%Y-%m-%d)" \
             -F "verified=true" \
-            -F "active=true"
+            -F "active=true" || echo "Error al subir reporte Bandit"
         fi
       
       # Sube reporte de OWASP Dependency-Check con curl si el archivo existe.
       - |
         if [ -f "${REPORT_DIR}/${SCA_FILE_REPORT}" ]; then
-          echo "Subiendo reporte SCA a DefectDojo: '/src/${REPORT_DIR}/${SCA_FILE_REPORT}'"
+          echo "Subiendo reporte SCA a DefectDojo: '${REPORT_DIR}/${SCA_FILE_REPORT}'"
           curl -k -X POST "https://${DD_HOST}/api/v2/import-scan/" \
             -H "Authorization: Token ${DD_API_KEY}" \
             -F "scan_type=Dependency Check Scan" \
@@ -83,7 +96,7 @@ phases:
             -F "engagement=$DD_ENGAGEMENT_ID" \
             -F "scan_date=$(date +%Y-%m-%d)" \
             -F "verified=true" \
-            -F "active=true"
+            -F "active=true" || echo "Error al subir reporte Dependency-Check"
         fi
 
 artifacts:
