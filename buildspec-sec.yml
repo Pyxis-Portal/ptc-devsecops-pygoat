@@ -64,7 +64,7 @@ phases:
 
       - echo "Verificando conectividad con DefectDojo..."
       # Este comando intentará una conexión rápida, si falla, el pipeline se detendrá aquí
-      - curl --head --silent --fail "https://${DD_HOST}/api/v2/" || { echo "No se pudo conectar a DefectDojo. Abortando subida."; exit 1; }
+      - curl -k --head --silent --fail "https://${DD_HOST}/api/v2/" || { echo "No se pudo conectar a DefectDojo. Abortando subida."; exit 1; }
       - echo "Conexión a DefectDojo exitosa."
 
       - echo "Subiendo reportes a DefectDojo vía API con curl..."
