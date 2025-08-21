@@ -64,7 +64,7 @@ phases:
             -F "scan_type=Bandit Scan" \
             -F "test_title=SAST-Bandit" \
             -F "file=@${REPORT_DIR}/${SAST_FILE_REPORT}" \
-            -F "engagement=$DD_ENGAMENT_ID" \
+            -F "engagement=$DD_ENGAGEMENT_ID" \
             -F "scan_date=$(date +%Y-%m-%d)" \
             -F "verified=true" \
             -F "active=true"
