@@ -46,6 +46,7 @@ phases:
           --project "${PROJECT_NAME}" 
           --format XML 
           --out /src/${REPORT_DIR}/${SCA_FILE_REPORT} 
+          --enableExperimental
           --nvdApiKey ${NIST_API_KEY}
           
   post_build:
