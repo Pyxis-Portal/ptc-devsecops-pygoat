@@ -39,14 +39,14 @@ phases:
       # --- 2. Software Composition Analysis (SCA) con OWASP Dependency-Check (Docker) ---
       # Se ejecuta OWASP Dependency-Check como usuario root user para solventar problemas de permisos
       - echo "Ejecutando SCA con OWASP Dependency-Check via Docker..."
-      #- docker pull owasp/dependency-check
-      #- >
-      #    docker run --rm -u root -v "$(pwd)":/src:z owasp/dependency-check 
-      #    --scan /src/requirements.txt 
-      #    --project "${PROJECT_NAME}" 
-      #    --format XML 
-      #    --out /src/${REPORT_DIR}/${SCA_FILE_REPORT} 
-      #    --nvdApiKey ${NIST_API_KEY}
+      - docker pull owasp/dependency-check
+      - >
+          docker run --rm -u root -v "$(pwd)":/src:z owasp/dependency-check 
+          --scan /src/requirements.txt 
+          --project "${PROJECT_NAME}" 
+          --format XML 
+          --out /src/${REPORT_DIR}/${SCA_FILE_REPORT} 
+          --nvdApiKey ${NIST_API_KEY}
           
   post_build:
     commands:
@@ -74,6 +74,15 @@ phases:
       - |
         if [ -f "${REPORT_DIR}/${SCA_FILE_REPORT}" ]; then
           echo "Subiendo reporte SCA a DefectDojo: '/src/${REPORT_DIR}/${SCA_FILE_REPORT}'"
+          curl -k -X POST "https://${DD_HOST}/api/v2/import-scan/" \
+            -H "Authorization: Token ${DD_API_KEY}" \
+            -F "scan_type=Dependency Check Scan" \
+            -F "test_title=SCA - Dependency Check" \
+            -F "file=@${REPORT_DIR}/${SCA_FILE_REPORT}" \
+            -F "engagement=$DD_ENGAGEMENT_ID" \
+            -F "scan_date=$(date +%Y-%m-%d)" \
+            -F "verified=true" \
+            -F "active=true"
         fi
 
 artifacts:
